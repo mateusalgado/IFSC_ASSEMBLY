@@ -1,0 +1,123 @@
+.eqv CASES_SW $a0
+.eqv CHOOSE_SW $s0
+.eqv ACUMULADOR $f1
+.eqv NUMBER_INPUT $f2
+
+# Definições de MACROS
+.macro li.s %reg, %imm
+   li $at, %imm
+   mtc1 $at, %reg
+   cvt.s.w %reg, %reg
+.end_macro
+
+.macro exit
+	li $v0, 10
+	syscall
+.end_macro
+
+.macro print_strPtr (%ptr)
+	li $v0, 4
+	la $a0, %ptr
+	syscall
+.end_macro
+
+.macro getInt(%reg)
+	li $v0, 5
+	syscall
+	move %reg, $v0
+.end_macro
+
+.macro printInt(%ptr)
+	li $v0, 1
+	lw $a0, %ptr
+	syscall
+.end_macro
+
+.macro getFlt(%reg)
+	li $v0, 6
+	syscall
+	mov.s %reg, $f0
+.end_macro
+
+.macro printFlt(%ptr)
+	li $v0, 2
+	mov.s $f12, %ptr
+	syscall
+.end_macro
+
+# Opções do switch case
+.data
+jump_table: 	.word default, case_1, case_2, case_3, case_4, case_5, case_6, case_7 
+
+q_menu:		.asciiz "\n\n1- Exibir Acumulador\n2- Zerar Acumulador\n3- Realizar Soma\n4- Realizar Subtração\n5- Realizar Divisão\n6- Realizar Multiplicação\n7- Sair do programa\n"
+t_select_error: .asciiz "\nEscolha uma opção correta!"
+t_resultado: 	.asciiz "\nSeu resultado é:"
+t_case2: 	.asciiz "\nAcumulador zerado"
+t_input_number: .asciiz "\nEntre com um número:"
+
+.text
+.globl main
+li.s ACUMULADOR, 0
+li CHOOSE_SW, 0
+main:
+	print_strPtr(q_menu)
+	getInt(CHOOSE_SW)
+	bltu CHOOSE_SW, 1, error
+	bgtu CHOOSE_SW, 7, error
+	la CASES_SW, jump_table
+	sll $t1, CHOOSE_SW, 2		# $s0 * 2
+	add CASES_SW, CASES_SW, $t1 	# &jump_table[i]
+	lw  $t2, 0(CASES_SW)
+	jr  $t2
+	
+error:
+	print_strPtr(t_select_error)
+	j main
+
+case_1:
+	print_strPtr(t_resultado)
+	printFlt(ACUMULADOR)
+	j main
+
+case_2:
+	print_strPtr(t_case2)
+	li.s ACUMULADOR, 0
+	j main
+
+case_3:
+	print_strPtr(t_input_number)
+	getFlt(NUMBER_INPUT)
+	add.s ACUMULADOR, ACUMULADOR, NUMBER_INPUT
+	print_strPtr(t_resultado)
+	printFlt(ACUMULADOR)
+	j main
+
+case_4:
+	print_strPtr(t_input_number)
+	getFlt(NUMBER_INPUT)
+	sub.s ACUMULADOR, ACUMULADOR, NUMBER_INPUT
+	print_strPtr(t_resultado)
+	printFlt(ACUMULADOR)
+	j main
+
+case_5:
+	print_strPtr(t_input_number)
+	getFlt(NUMBER_INPUT)
+	div.s ACUMULADOR, ACUMULADOR, NUMBER_INPUT
+	print_strPtr(t_resultado)
+	printFlt(ACUMULADOR)
+	j main
+
+case_6:
+	print_strPtr(t_input_number)
+	getFlt(NUMBER_INPUT)
+	mul.s ACUMULADOR, ACUMULADOR, NUMBER_INPUT
+	print_strPtr(t_resultado)
+	printFlt(ACUMULADOR)
+	j main
+
+case_7:
+	exit
+
+default:
+	j main
